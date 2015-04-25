@@ -1,7 +1,6 @@
 <?php
 header('Content-type: text/html;charset=utf-8');
-require_once 'provadb.php';
-require_once 'provadb.php';
+require 'provadb.php';
 function Cerca($cercatonome,$cercatocogn){
 $db=dbconn();
 	if(strcmp("",$cercatocogn)!=0 && strcmp("",$cercatonome)!=0)
@@ -14,9 +13,11 @@ $sql->execute();
 while($res = $sql->fetch(PDO::FETCH_ASSOC))
 $out[]=$res;
 print(json_encode($out)); 
+$db=null;
 }
 function Login($nome,$psw)
 {
+        try{
 	$db=dbconn();
 	$db->beginTransaction();
 	$query="UPDATE `Utenti` SET `status`='YES' WHERE password like '$psw' AND  mail like '$nome';";
@@ -29,13 +30,19 @@ function Login($nome,$psw)
 		if ($num==1) {
 			while($res = $sql->fetch(PDO::FETCH_ASSOC))
 				$out[]=$res;
-			print(json_encode($output));
+			print(json_encode($out));
                         
 		} else {
 			print('[{"status":"NO","code_err":"2","error":"utente non esiste"}]');
 		}
+      $db=null;
+     }catch (PDOException $e) {
+    print "Error!: " . $e->getMessage() . "<br/>";
+    die();
+}
 }
 function Logout($nome,$psw){
+	try{
 	$db=dbconn();
 	$db->beginTransaction();
 	$query="UPDATE `Utenti` SET `status`='NO' WHERE password like '$psw' AND (nick like '$nome' or mail like '$nome');";
@@ -47,6 +54,11 @@ function Logout($nome,$psw){
 		}else {
 		print('{"status":"NO"}');
 	}
+	$db=null;
+	}catch (PDOException $e) {
+    print "Error!: " . $e->getMessage() . "<br/>";
+    die();
+}
 }
 function Registrazione($nome,$cognome,$nick,$mail,$psw,$citta,$dataN){
 	$db=dbconn();

@@ -58,9 +58,10 @@ function Logout($nome,$psw){
 	}catch (PDOException $e) {
     print "Error!: " . $e->getMessage() . "<br/>";
     die();
-}
+	}
 }
 function Registrazione($nome,$cognome,$nick,$mail,$psw,$citta,$dataN){
+	try{
 	$db=dbconn();
 	$db->beginTransaction();
 	$query="INSERT INTO `Utenti`( `nome`, `cognome`, `nick`, `mail`, `password`, `citta`, `dataN`) VALUES ('$nome','$cognome','$nick','$mail','$psw','$citta','$dataN');";
@@ -72,9 +73,15 @@ function Registrazione($nome,$cognome,$nick,$mail,$psw,$citta,$dataN){
 	} else {
 		print('{"code_err":"1","error":"utente esiste"}');
 	}
+	$db=null;
+	}catch (PDOException $e) {
+    print "Error!: " . $e->getMessage() . "<br/>";
+    die();
+	}
 }
 function insertCommento($mail,$psw,$mex,$idpost)
 {
+     try{
         $db=dbconn();
 	$query="SELECT id_utenti FROM Utenti where mail like '$mail' and password like '$psw';";
 $sql = $db->prepare($query);
@@ -106,8 +113,14 @@ $row=$sql->fetch();
 	} else {
 		print('{"code_err":"1","error":"utente esiste"}');
 	}
+	$db=null;
+	}catch (PDOException $e) {
+    print "Error!: " . $e->getMessage() . "<br/>";
+    die();
+	}
 }
 function deleteCommento($mail,$psw,$idcom,$idpost){
+	try{
         $db=dbconn();
 $text="[";
 	$query="SELECT id_utenti FROM Utenti where mail like '$mail' and password like '$psw';";
@@ -137,9 +150,14 @@ $text="[";
       $text=$text."]";
       print($text);
 	} 
+	$db=null;
+	}catch (PDOException $e) {
+    print "Error!: " . $e->getMessage() . "<br/>";
+    die();
+	}
 }
 function insertPost($mail,$messaggio,$psw,$pathImages,$immThumb,$id_utente){
-	
+	try{
         $db=conect();
 	$pathImages=str_replace('./','', $pathImages);
         $immThumb=str_replace('./','',$immThumb);
@@ -167,10 +185,16 @@ function insertPost($mail,$messaggio,$psw,$pathImages,$immThumb,$id_utente){
 	} else {
 		print('{"code":"1"}');
 	}
+	$db=null;
+	}catch (PDOException $e) {
+    print "Error!: " . $e->getMessage() . "<br/>";
+    die();
+	}
 }
 
 
 function insertLike($post_id,$mail,$psw){
+	try{
 	$db=conect();
 	$query="SELECT id_utenti FROM Utenti where mail like '$mail' AND password='$psw';";
 	$sql = $db->prepare($query);
@@ -199,8 +223,14 @@ function insertLike($post_id,$mail,$psw){
 		print('{"code_err":"1","error":"utente esiste"}');
 	}
         }
+	$db=null;
+	}catch (PDOException $e) {
+    print "Error!: " . $e->getMessage() . "<br/>";
+    die();
+	}
 }
 function deleteLike($post_id,$mail,$psw){
+	try{
 	$db=dbconn();
 	$query="SELECT id_utenti FROM Utenti where mail like '$mail' and password like '$psw';";
 	$sql = $db->prepare($query);
@@ -226,8 +256,14 @@ function deleteLike($post_id,$mail,$psw){
 	} else {
 		print('{"code":"1","error":"utente esiste"}');
 	}
+	$db=null;
+	}catch (PDOException $e) {
+    print "Error!: " . $e->getMessage() . "<br/>";
+    die();
+	}
 }
 function CalcolaLike($mail){
+	try{
 	$db=dbconn();
 	$query="SELECT id_utenti FROM Utenti where mail like '$mail' or nick like '$mail';";
 	$sql = $db->prepare($query);
@@ -246,8 +282,14 @@ function CalcolaLike($mail){
 		$sql = $db->exec($query);
 			 $db->Commit();
 	}
+	$db=null;
+	}catch (PDOException $e) {
+    print "Error!: " . $e->getMessage() . "<br/>";
+    die();
+	}
 }
 function insertImmProfilo($mail,$psw,$path){
+	try{
 	$db=dbconn();
 	$query="SELECT id_utenti,`imm_profilo` FROM Utenti where mail like '$mail' and password like '$psw';";
 	$sql = $db->prepare($query);
@@ -270,6 +312,11 @@ function insertImmProfilo($mail,$psw,$path){
 		print('{"code":"0","error":"'.$path.'"}');
 	} else {
 		print('{"code":"0","error":"'.$pathVecchio.'"}');
+	}
+	$db=null;
+	}catch (PDOException $e) {
+    print "Error!: " . $e->getMessage() . "<br/>";
+    die();
 	}
 }
 function selectPost($mail,$psw){
@@ -297,6 +344,7 @@ function selectPost($mail,$psw){
 	$p.=']';
 	}
 	print(p);
+	$db=null;
 	file_put_contents("post.json", $p);
 	return $id_utente;
 }
@@ -400,6 +448,7 @@ function getPrivateCommenti($id,$db){
 return $text;
 }
 function selectMyData($mail,$psw){
+	try{
 	$db=dbconn();
 	$query="SELECT id_utenti FROM Utenti where mail like '$mail' and password like '$psw';";
 	$sql = $db->prepare($query);
@@ -409,8 +458,14 @@ function selectMyData($mail,$psw){
 	$id_utente=$row[0];
 	print'{"id_utente":"'.$id_utente.'","myLike":'.getLike($id_utente,$db).',"mycomment":'.getPrivateCommenti($id_utente,$db).',"myPost":'.getAllPostFromUser($id_utente,$db).'}';
 	
+	$db=null;
+	}catch (PDOException $e) {
+    print "Error!: " . $e->getMessage() . "<br/>";
+    die();
+	}
 }
 function selectDataUser($id){
+    try{
 	$db=dbconn();
 	$query="SELECT id_utenti,nome,cognome,imm_profilo FROM Utenti where id_utenti=$id ;";
 	$sql = $db->prepare($query);
@@ -419,6 +474,12 @@ function selectDataUser($id){
 	 $row=$sql->fetch();
 	$id_utente=$row[0];
 	print'{"id_utente":"'.$id_utente.'","nome":"'.$row[1].'","cognome":"'.$row[2].'","imm_profilo":"'.$row[3].'","Post":'.getAllPostFromUser($id_utente,$db).'}';
+
+	$db=null;
+	}catch (PDOException $e) {
+    print "Error!: " . $e->getMessage() . "<br/>";
+    die();
+	}
 }
 function getAllPostFromUser($id,$db){
         $text='[';
@@ -441,6 +502,7 @@ return $text;
 //SELECT count(Post_id) FROM `Post` inner join `Like` on `Post`.id_post=`Like`.Post_id where `Like`.id_utente=2
 //AND (data BETWEEN '2015-04-14 00:00:00' AND '2015-04-18 23:29:59')
 function CalcolaClassifica(){
+	try{
 	$db=dbconn();
 	$query="SELECT * FROM Post where numLike>0  ORDER by numLike DESC Limit 5";
 	print '[';
@@ -457,6 +519,12 @@ function CalcolaClassifica(){
         $i++;
         }
 	print ']';
+	
+	$db=null;
+	}catch (PDOException $e) {
+    print "Error!: " . $e->getMessage() . "<br/>";
+    die();
+	}
 }
 
   ?>

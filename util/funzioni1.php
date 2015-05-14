@@ -63,7 +63,7 @@ function Registrazione($nome,$cognome,$nick,$mail,$psw,$citta,$dataN){
 	$db=dbconn();
 	$query="INSERT INTO `Utenti`( `nome`, `cognome`, `nick`, `mail`, `password`, `citta`, `dataN`) VALUES ('$nome','$cognome','$nick','$mail','$psw','$citta','$dataN');";
 	$sql = $db->prepare($query);
-	   		 $sql->execute();
+	$sql->execute();
 	$num=$sql->rowCount();
 	if ($num==1) {
 		print('{"code_err":"0","error":"Registrazione andata a buon fine"}');
@@ -109,6 +109,8 @@ $row=$sql->fetch();
 	} else {
 		print('{"code_err":"1","error":"utente esiste"}');
 	}
+	
+      selectPosts($mail,$psw,$db);
 	$db=null;
 	}catch (PDOException $e) {
     print "Error!: " . $e->getMessage() . "<br/>";
@@ -144,6 +146,7 @@ $text="[";
         }
       $text=$text."]";
       print($text);
+      selectPosts($mail,$psw,$db);
 	} 
 	$db=null;
 	}catch (PDOException $e) {
@@ -154,6 +157,7 @@ $text="[";
 function insertPost($mail,$messaggio,$psw,$pathImages,$immThumb,$id_utente){
 	try{
         $db=dbconn();
+        $p="[";
 	$pathImages=str_replace('./','', $pathImages);
         $immThumb=str_replace('./','',$immThumb);
 	
@@ -162,7 +166,7 @@ function insertPost($mail,$messaggio,$psw,$pathImages,$immThumb,$id_utente){
 	   		 $sql->execute();
 	$num=$sql->rowCount();
 	if ($num==1) {
-		print '{"code":"0","result":[';
+		print '{"code":"0","result":';
 		$query="SELECT id_post,id_utente,messaggio,thumb_imm,immagine,data,numLike FROM Post ORDER by id_post DESC Limit 50";
 		$sql = $db->prepare($query);
 	    $sql->execute();
@@ -170,13 +174,15 @@ function insertPost($mail,$messaggio,$psw,$pathImages,$immThumb,$id_utente){
         $i=0;
         while($row=$sql->fetch()){
           if($num-1==$i)
-          print '{"id_post":"'.$row[0].'","utente_post":'.getUtente($row[1],$db).',"messaggio_post":"'.$row[2].'","num_Like":"'.$row[6].'","thumb_imm_post":"'.$row[3].'","immagine":"'.$row[4].'","data_post":"'.$row[5].'","commenti":'.getCommenti($row[0],$db).'}';
+          $p=$p.'{"id_post":"'.$row[0].'","utente_post":'.getUtente($row[1],$db).',"messaggio_post":"'.$row[2].'","num_Like":"'.$row[6].'","thumb_imm_post":"'.$row[3].'","immagine":"'.$row[4].'","data_post":"'.$row[5].'","commenti":'.getCommenti($row[0],$db).'}]';
           else
-          print '{"id_post":"'.$row[0].'","utente_post":'.getUtente($row[1],$db).',"messaggio_post":"'.$row[2].'","num_Like":"'.$row[6].'","thumb_imm_post":"'.$row[3].'","immagine":"'.$row[4].'","data_post":"'.$row[5].'","commenti":'.getCommenti($row[0],$db).'},';
+          $p=$p.'{"id_post":"'.$row[0].'","utente_post":'.getUtente($row[1],$db).',"messaggio_post":"'.$row[2].'","num_Like":"'.$row[6].'","thumb_imm_post":"'.$row[3].'","immagine":"'.$row[4].'","data_post":"'.$row[5].'","commenti":'.getCommenti($row[0],$db).'},';
         $i++;
         
 	}
-	print "]}";
+	print $p."}";
+
+	file_put_contents(dirname(__FILE__)."/../post.json", $p);	
 	} else {
 		print('{"code":"1"}');
 	}
@@ -195,15 +201,14 @@ function insertLike($post_id,$mail,$psw){
 	$sql = $db->prepare($query);
 	    $sql->execute();
 	    $num=$sql->rowCount();
-        if ($num==1) {
         $row=$sql->fetch();
 	$id_utente=$row[0];
+        if ($num==1) {
 	$query="INSERT INTO `Like`(`Post_id`, `Utente_id`) VALUES ('$post_id','$id_utente');";
 	$sql = $db->prepare($query);
 	   		 $sql->execute();
 	$num=$sql->rowCount();
 	if ($num==1) {
-             print getLike($id_utente);
              $query="SELECT COUNT(*) FROM `Like` where Post_id='$post_id';";
              $sql = $db->prepare($query);
 	    	 $sql->execute();
@@ -212,6 +217,8 @@ function insertLike($post_id,$mail,$psw){
 	         $query="UPDATE `Post` SET `numLike`='$numL' WHERE `id_post`='$post_id'";
 			 $sql = $db->prepare($query);
 	   		 $sql->execute();
+             print getLike($id_utente,$db,$numL);
+	   		 selectPosts($mail,$psw,$db);
 	} else {
 		print('{"code_err":"1","error":"utente esiste"}');
 	}
@@ -244,9 +251,16 @@ function deleteLike($post_id,$mail,$psw){
 			 $query="UPDATE `Post` SET `numLike`='$numL' WHERE `id_post`='$post_id'";
 			 $sql = $db->exec($query);
 			 $db->commit();
-		print('{"code":"0","error":"Like inserita"}');
+		print('{"code":"0","error":"Like inserita","numL":"'.$numL.'"}');
+		
+	   		 selectPosts($mail,$psw,$db);
 	} else {
-		print('{"code":"1","error":"utente esiste"}');
+	$query="SELECT COUNT(*) FROM `Like` where Post_id='$post_id';";
+             $sql = $db->prepare($query);
+	   		 $sql->execute();
+			$row=$sql->fetch();
+			 $numL=$row[0];
+		print('{"code":"1","error":"utente esiste","numL":"'.$numL.'"}');
 	}
 	$db=null;
 	}catch (PDOException $e) {
@@ -335,10 +349,63 @@ function selectPost($mail,$psw){
         }
 	$p.=']';
 	}
-	print(p);
 	$db=null;
-	file_put_contents("post.json", $p);
+	file_put_contents(dirname(__FILE__)."/../post.json", $p);
 	return $id_utente;
+}
+function selectPosts($mail,$psw,$db){
+	$query="SELECT id_utenti FROM Utenti where mail like '$mail' and password like '$psw';";
+	$sql = $db->prepare($query);
+	    $sql->execute();
+	$row=$sql->fetch();
+    $id_utente=$row[0];
+	$num=$sql->rowCount();
+	if ($num==1) {
+          $p='[';
+		$query="SELECT id_post,id_utente,messaggio,thumb_imm,immagine,data,numLike FROM Post ORDER by id_post DESC Limit 50";
+		$sql = $db->prepare($query);
+	    $sql->execute();
+        $num=$sql->rowCount();
+        $i=0;
+        while($row=$sql->fetch()){
+          if($num-1==$i)
+          $p.= '{"id_post":"'.$row[0].'","utente_post":'.getUtente($row[1],$db).',"messaggio_post":"'.$row[2].'","num_Like":"'.$row[6].'","thumb_imm_post":"'.$row[3].'","immagine":"'.$row[4].'","data_post":"'.$row[5].'","commenti":'.getCommenti($row[0],$db).'}';
+          else
+          $p.= '{"id_post":"'.$row[0].'","utente_post":'.getUtente($row[1],$db).',"messaggio_post":"'.$row[2].'","num_Like":"'.$row[6].'","thumb_imm_post":"'.$row[3].'","immagine":"'.$row[4].'","data_post":"'.$row[5].'","commenti":'.getCommenti($row[0],$db).'},';
+        $i++;
+        }
+	$p.=']';
+	}
+	
+	file_put_contents(dirname(__FILE__)."/../post.json", $p);
+	return $id_utente;
+}
+function selectAllPost($mail,$psw){
+	$db=dbconn();
+	$query="SELECT id_utenti FROM Utenti where mail like '$mail' and password like '$psw';";
+	$sql = $db->prepare($query);
+	    $sql->execute();
+	$row=$sql->fetch();
+    $id_utente=$row[0];
+	$num=$sql->rowCount();
+	if ($num==1) {
+          $p='[';
+		$query="SELECT id_post,id_utente,messaggio,thumb_imm,immagine,data,numLike FROM Post ORDER by id_post DESC Limit 50";
+		$sql = $db->prepare($query);
+	    $sql->execute();
+        $num=$sql->rowCount();
+        $i=0;
+        while($row=$sql->fetch()){
+          if($num-1==$i)
+          $p.= '{"id_post":"'.$row[0].'","utente_post":'.getUtente($row[1],$db).',"messaggio_post":"'.$row[2].'","num_Like":"'.$row[6].'","thumb_imm_post":"'.$row[3].'","immagine":"'.$row[4].'","data_post":"'.$row[5].'","commenti":'.getCommenti($row[0],$db).'}';
+          else
+          $p.= '{"id_post":"'.$row[0].'","utente_post":'.getUtente($row[1],$db).',"messaggio_post":"'.$row[2].'","num_Like":"'.$row[6].'","thumb_imm_post":"'.$row[3].'","immagine":"'.$row[4].'","data_post":"'.$row[5].'","commenti":'.getCommenti($row[0],$db).'},';
+        $i++;
+        }
+	$p.=']';
+	}
+	$db=null;
+	return $p;
 }
 function getCommenti($id,$db){
      $text="[";
@@ -374,7 +441,7 @@ $text="[";
       $text=$text."]";
 return $text;
 }
-function getLike($idUtente,$db){
+function getLike($idUtente,$db,$numL){
 	$text="[";
      $query="SELECT COUNT(*) FROM `Like` where `Utente_id`=$idUtente;";
      $sql = $db->prepare($query);
@@ -388,9 +455,9 @@ function getLike($idUtente,$db){
         $i=0;
         while($row=$sql->fetch()){
            if($num-1==$i)
-          $text=$text.'{"utente":'.getPost($row[0]).',"id_post":"'.$row[0].'","data":"'.$row[2].'"}';
+          $text=$text.'{"utente":'.getPost($row[0],$db).',"id_post":"'.$row[0].'","data":"'.$row[2].'","numL":"'.$numL.'"}';
           else
-          $text=$text.'{"utente":'.getPost($row[0]).',"id_post":"'.$row[0].'","data":"'.$row[2].'"},';
+          $text=$text.'{"utente":'.getPost($row[0],$db).',"id_post":"'.$row[0].'","data":"'.$row[2].'","numL":"'.$numL.'"},';
           $i++;
         }
       }

@@ -7,7 +7,6 @@ $col = 'mysql:host=localhost;dbname=imotocro_forum';
 try {
   // connessione tramite creazione di un oggetto PDO
   $db = new PDO($col , 'imoto_forum', '100289ba]');
-
 return $db;
 }
 // blocco catch per la gestione delle eccezioni
